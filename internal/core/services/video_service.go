@@ -8,10 +8,10 @@ import (
 )
 
 type VideoService struct {
-	repo ports.MediaRepository
+	repo ports.VideoRepository
 }
 
-func NewVideoService(repo ports.MediaRepository) *VideoService {
+func NewVideoService(repo ports.VideoRepository) *VideoService {
 	return &VideoService{
 		repo: repo,
 	}

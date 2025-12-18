@@ -12,7 +12,6 @@ import (
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/adapters/middleware"
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/adapters/repository"
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/config"
-	"github.com/AchilleasB/baby-kliniek/media-service/internal/core/ports"
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/core/services"
 )
 
@@ -27,10 +26,11 @@ func main() {
 	}
 	defer mongoClient.Disconnect(ctx)
 
-	var mediaRepo ports.MediaRepository = repository.NewMongoRepository(mongoClient)
+	mongoRepo := repository.NewMongoRepository(mongoClient)
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTPublicKey)
-	mediaService := services.NewVideoService(mediaRepo)
+
+	mediaService := services.NewVideoService(mongoRepo)
 
 	mediaHandler := handler.NewMediaHandler(mediaService)
 	// healthHandler := handler.NewHealthHandler(mongoClient)

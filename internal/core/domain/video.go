@@ -14,9 +14,9 @@ const (
 )
 
 type Video struct {
-	ID          string      `json:"id"`
-	URL         string      `json:"url"`
-	ContentType ContentType `json:"content_type"`
-	Description string      `json:"description"`
-	CreatedAt   time.Time   `json:"created_at"`
+	ID          string      `json:"id" bson:"_id"`
+	URL         string      `json:"url" bson:"url"`
+	ContentType ContentType `json:"content_type" bson:"content_type"`
+	Description string      `json:"description" bson:"description"`
+	CreatedAt   time.Time   `json:"created_at" bson:"created_at"`
 }
