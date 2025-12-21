@@ -6,12 +6,20 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type cacheEntry struct {
+	claims jwt.MapClaims
+	exp    int64
+}
+
 type AuthMiddleware struct {
 	publicKey *rsa.PublicKey
+	cache     sync.Map
 }
 
 func NewAuthMiddleware(publicKey *rsa.PublicKey) *AuthMiddleware {
@@ -29,7 +37,8 @@ const (
 
 func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Extract token from header
+		start := time.Now() // start time for processing time measurement
+
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			log.Printf("Missing Authorization header")
@@ -46,35 +55,15 @@ func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.Ha
 
 		tokenString := parts[1]
 
-		// Parse and validate token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-				return nil, jwt.ErrSignatureInvalid
-			}
-			return m.publicKey, nil
-		})
-
+		claims, err := m.getClaimsFromCacheOrParse(tokenString)
+		duration := time.Since(start) // calculate processing time
+		log.Printf("AuthMiddleware processing time: %v", duration)
 		if err != nil {
 			log.Printf("Token parse error: %v", err)
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
 		}
 
-		if !token.Valid {
-			log.Printf("Token not valid")
-			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		// Extract claims safely
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			log.Printf("Failed to extract claims")
-			http.Error(w, "invalid token claims", http.StatusUnauthorized)
-			return
-		}
-
-		// Safely get userID
 		userID, ok := claims["sub"].(string)
 		if !ok || userID == "" {
 			log.Printf("Missing or invalid 'sub' claim: %v", claims["sub"])
@@ -82,7 +71,6 @@ func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.Ha
 			return
 		}
 
-		// Safely get role
 		userRole, ok := claims["role"].(string)
 		if !ok || userRole == "" {
 			log.Printf("Missing or invalid 'role' claim: %v", claims["role"])
@@ -92,17 +80,51 @@ func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.Ha
 
 		log.Printf("Token validated - UserID: %s, Role: %s", userID, userRole)
 
-		// Check role
 		if userRole != role {
 			log.Printf("Role mismatch: required %s, got %s", role, userRole)
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 
-		// Add to context
 		ctx := context.WithValue(r.Context(), UserIDKey, userID)
 		ctx = context.WithValue(ctx, RoleKey, userRole)
 
 		next(w, r.WithContext(ctx))
 	}
+}
+
+func (m *AuthMiddleware) getClaimsFromCacheOrParse(tokenString string) (jwt.MapClaims, error) {
+	if entry, ok := m.cache.Load(tokenString); ok {
+		ce := entry.(cacheEntry)
+		if time.Now().Unix() < ce.exp {
+			return ce.claims, nil
+		}
+		m.cache.Delete(tokenString)
+	}
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return m.publicKey, nil
+	})
+	if err != nil || !token.Valid {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, jwt.ErrTokenMalformed
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return nil, jwt.ErrTokenMalformed
+	}
+	m.cache.Store(tokenString, cacheEntry{
+		claims: claims,
+		exp:    int64(exp),
+	})
+
+	return claims, nil
 }

@@ -33,14 +33,8 @@ func main() {
 	mediaService := services.NewVideoService(mongoRepo)
 
 	mediaHandler := handler.NewMediaHandler(mediaService)
-	// healthHandler := handler.NewHealthHandler(mongoClient)
 
 	mux := http.NewServeMux()
-
-	// Health endpoints (OpenShift compatible)
-	// mux.HandleFunc("/health", healthHandler.Health)
-	// mux.HandleFunc("/health/ready", healthHandler.Ready)
-	// mux.HandleFunc("/health/live", healthHandler.Live)
 
 	// API endpoints
 	mux.HandleFunc("GET /media/videos", mediaHandler.GetVideos)

@@ -32,6 +32,19 @@ The Media Service provides:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Middleware (JWT Authentication & Caching)
+
+The service uses a custom middleware for JWT authentication and role-based authorization. This middleware performs the following:
+
+- **JWT Extraction & Validation:** Extracts the JWT from the `Authorization` header and validates it using the configured RSA public key.
+- **Role Enforcement:** Checks the `role` claim in the JWT to ensure the user has the required permissions.
+- **User Context:** On successful validation, injects the user ID and role into the request context for downstream handlers.
+- **In-Memory Caching:** To optimize performance, the middleware caches the results of JWT validation in memory. When a JWT is first seen, it is parsed and validated; subsequent requests with the same token are served from the cache until the token expires. This reduces cryptographic overhead and improves response times, especially under high load.
+
+**Production Note:**  
+The in-memory cache is thread-safe and suitable for most deployments. However, in a multi-replica environment, each instance maintains its own cache. If shared caching across replicas is required, an option is to integrate a distributed cache like Redis.
+
+---
 ## API Endpoints
 
 | Method | Endpoint                | Description                | Auth Required | Role  |
