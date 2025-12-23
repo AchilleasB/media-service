@@ -37,14 +37,19 @@ func main() {
 	mux := http.NewServeMux()
 
 	// API endpoints
-	mux.HandleFunc("GET /media/videos", mediaHandler.GetVideos)
-	mux.HandleFunc("GET /media/videos/{id}", mediaHandler.GetOneVideo)
+	mux.Handle("GET /media/videos",
+		authMiddleware.RequireRole([]string{"ADMIN", "PARENT"}, http.HandlerFunc(mediaHandler.GetVideos)),
+	)
+
+	mux.Handle("GET /media/videos/{id}",
+		authMiddleware.RequireRole([]string{"ADMIN", "PARENT"}, http.HandlerFunc(mediaHandler.GetOneVideo)),
+	)
 
 	mux.Handle("POST /media/videos",
-		authMiddleware.RequireRole("ADMIN", http.HandlerFunc(mediaHandler.CreateVideo)),
+		authMiddleware.RequireRole([]string{"ADMIN"}, http.HandlerFunc(mediaHandler.CreateVideo)),
 	)
 	mux.Handle("DELETE /media/videos/{id}",
-		authMiddleware.RequireRole("ADMIN", http.HandlerFunc(mediaHandler.DeleteVideo)),
+		authMiddleware.RequireRole([]string{"ADMIN"}, http.HandlerFunc(mediaHandler.DeleteVideo)),
 	)
 
 	log.Printf("Starting server on :%s", cfg.Port)

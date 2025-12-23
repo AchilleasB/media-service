@@ -35,7 +35,7 @@ const (
 	RoleKey   contextKey = "role"
 )
 
-func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.HandlerFunc {
+func (m *AuthMiddleware) RequireRole(roles []string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now() // start time for processing time measurement
 
@@ -54,10 +54,11 @@ func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.Ha
 		}
 
 		tokenString := parts[1]
-
 		claims, err := m.getClaimsFromCacheOrParse(tokenString)
+
 		duration := time.Since(start) // calculate processing time
 		log.Printf("AuthMiddleware processing time: %v", duration)
+
 		if err != nil {
 			log.Printf("Token parse error: %v", err)
 			http.Error(w, "invalid token", http.StatusUnauthorized)
@@ -80,8 +81,15 @@ func (m *AuthMiddleware) RequireRole(role string, next http.HandlerFunc) http.Ha
 
 		log.Printf("Token validated - UserID: %s, Role: %s", userID, userRole)
 
-		if userRole != role {
-			log.Printf("Role mismatch: required %s, got %s", role, userRole)
+		allowedRoles := false
+		for _, r := range roles {
+			if userRole == r {
+				allowedRoles = true
+				break
+			}
+		}
+		if !allowedRoles {
+			log.Printf("Role mismatch: required one of %v, got %s", roles, userRole)
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
