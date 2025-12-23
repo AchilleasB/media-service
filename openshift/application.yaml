@@ -1,0 +1,131 @@
+# 1. ImageStream
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: media-service
+  labels:
+    app: media-service
+spec:
+  lookupPolicy:
+    local: true
+---
+# 2. Build Config (Update the Git URI if needed!)
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: media-service
+  labels:
+    app: media-service
+spec:
+  resources:
+    limits:
+      memory: 1Gi
+      cpu: "1"
+    requests:
+      memory: 256Mi
+      cpu: "200m"
+  source:
+    type: Git
+    git:
+      uri: https://github.com/AchilleasB/media-service.git 
+      ref: main
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: media-service:latest
+  triggers:
+    - type: ConfigChange
+---
+# 3. Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-service
+  labels:
+    app: media-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-service
+  template:
+    metadata:
+      labels:
+        app: media-service
+    spec:
+      containers:
+        - name: media-service
+          image: media-service:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: media-db-secret
+                  key: username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: media-db-secret
+                  key: password
+            - name: PUBLIC_KEY_PATH
+              value: "/etc/certs/public.pem"
+            - name: APP_VERSION
+              value: "1.0.0"
+            - name: MONGO_URI
+              value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@media-db:27017"
+          volumeMounts:
+            - name: public-key
+              mountPath: "/etc/certs"
+              readOnly: true
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: public-key
+          secret:
+            secretName: identity-rsa-keys  # Reference to the project-wide secrets 
+            items:                         # THE SECURITY FILTER
+              - key: public.pem            # Only grab public.pem, not private.pem, for security reasons
+                path: public.pem           # Mount it here
+---
+# 4. Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-service
+  labels:
+    app: media-service
+spec:
+  ports:
+    - port: 8081
+      targetPort: 8081
+      name: http
+  selector:
+    app: media-service
+---
+# 5. Route
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: media-service
+  labels:
+    app: media-service
+spec:
+  to:
+    kind: Service
+    name: media-service
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

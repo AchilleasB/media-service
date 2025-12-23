@@ -1,0 +1,75 @@
+# 1. Storage for Mongo
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media-db-pvc
+  labels:
+    app: media-service
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# 2. MongoDB Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-db
+  labels:
+    app: media-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: media-db
+  template:
+    metadata:
+      labels:
+        app: media-db
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:5.0 
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: media-db-secret
+                  key: username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: media-db-secret
+                  key: password
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "500m"
+            requests:
+              memory: 256Mi
+              cpu: "100m"
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: media-db-pvc
+---
+# 3. Internal Service for Mongo
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-db
+  labels:
+    app: media-db
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: media-db
