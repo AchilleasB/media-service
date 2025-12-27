@@ -13,13 +13,14 @@ import (
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/adapters/repository"
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/config"
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/core/services"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 
 	cfg := config.Load()
-
 	ctx := context.Background()
+
 	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.MongoURI))
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
@@ -28,7 +29,18 @@ func main() {
 
 	mongoRepo := repository.NewMongoRepository(mongoClient)
 
-	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTPublicKey)
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.RedisAddress,
+		Password: cfg.RedisPassword,
+		DB:       0,
+	})
+
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		log.Fatalf("failed to connect to redis: %v", err)
+	}
+	log.Println("Authenticated with Redis successfully")
+
+	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTPublicKey, redisClient)
 
 	mediaService := services.NewVideoService(mongoRepo)
 

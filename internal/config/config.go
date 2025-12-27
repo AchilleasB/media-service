@@ -8,9 +8,11 @@ import (
 )
 
 type Config struct {
-	JWTPublicKey *rsa.PublicKey
-	MongoURI     string
-	Port         string
+	JWTPublicKey  *rsa.PublicKey
+	MongoURI      string
+	Port          string
+	RedisAddress  string
+	RedisPassword string
 }
 
 func Load() *Config {
@@ -29,15 +31,27 @@ func Load() *Config {
 		mongoURI = "mongodb://localhost:27017"
 	}
 
+	redisAddress := os.Getenv("REDIS_ADDRESS")
+	if redisAddress == "" {
+		redisAddress = "localhost:6379"
+	}
+
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	if redisPassword == "" {
+		redisPassword = ""
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8081"
 	}
 
 	return &Config{
-		JWTPublicKey: publicKey,
-		MongoURI:     mongoURI,
-		Port:         port,
+		JWTPublicKey:  publicKey,
+		MongoURI:      mongoURI,
+		Port:          port,
+		RedisAddress:  redisAddress,
+		RedisPassword: redisPassword,
 	}
 }
 
