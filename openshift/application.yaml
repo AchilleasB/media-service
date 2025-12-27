@@ -79,7 +79,7 @@ spec:
               value: "1.0.0"
             - name: MONGO_URI
               value: "mongodb://$(MONGO_INITDB_ROOT_USERNAME):$(MONGO_INITDB_ROOT_PASSWORD)@media-db:27017"
-            - name: REDIS_ADDR
+            - name: REDIS_ADDRESS
               value: "redis-service:6379"
             - name: REDIS_PASSWORD
               valueFrom:

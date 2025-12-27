@@ -71,6 +71,7 @@ func (m *AuthMiddleware) RequireRole(roles []string, next http.HandlerFunc) http
 		// L2 Redis blacklist check (Kill-Switch)
 		isRevoked, err := m.redisClient.Exists(r.Context(), "blacklist:"+jti).Result()
 		if err == nil && isRevoked > 0 {
+			m.cache.Delete(jti)
 			log.Printf("Rejected: JTI %s is blacklisted", jti)
 			http.Error(w, "token revoked", http.StatusUnauthorized)
 			return
