@@ -38,6 +38,11 @@ func NewMediaHandler(video ports.VideoService) *MediaHandler {
 }
 
 func (h *MediaHandler) GetVideos(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	videos, err := h.videoService.GetVideos(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to get videos", http.StatusInternalServerError)
@@ -67,6 +72,11 @@ func (h *MediaHandler) GetVideos(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Retrieved %d videos", len(videos))
 }
 func (h *MediaHandler) GetOneVideo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "Missing video ID", http.StatusBadRequest)
@@ -93,6 +103,11 @@ func (h *MediaHandler) GetOneVideo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (h *MediaHandler) CreateVideo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req CreateVideoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -128,6 +143,11 @@ func (h *MediaHandler) CreateVideo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func (h *MediaHandler) DeleteVideo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "Missing video ID", http.StatusBadRequest)
