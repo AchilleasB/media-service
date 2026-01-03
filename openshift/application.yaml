@@ -90,6 +90,18 @@ spec:
             - name: public-key
               mountPath: "/etc/certs"
               readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
           resources:
             requests:
               memory: "256Mi"
