@@ -3,11 +3,9 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"runtime"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -45,8 +43,30 @@ type Check struct {
 	Message string `json:"message,omitempty"`
 }
 
-// Health is for general health status (liveness probe in OpenShift)
+// Health is a simple liveness check - just confirms the Go process is running
 func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	response := HealthResponse{
+		Status:    "UP",
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Uptime:    time.Since(h.startTime).Round(time.Second).String(),
+		Version:   h.version,
+		Checks:    map[string]Check{"process": {Status: "UP"}},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Failed to encode response: %v", err)
+	}
+}
+
+// Ready checks if the service is ready to accept traffic (readiness probe)
+func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -56,7 +76,6 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	status := "UP"
 	httpStatus := http.StatusOK
 
-	// Database check
 	dbCheck := h.checkDatabase()
 	checks["database"] = dbCheck
 	if dbCheck.Status != "UP" {
@@ -64,24 +83,9 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 		httpStatus = http.StatusServiceUnavailable
 	}
 
-	// Memory check
-	memCheck := h.checkMemory()
-	checks["memory"] = memCheck
-
-	// Public key check
-	keyCheck := h.checkPublicKey()
-	checks["public_key"] = keyCheck
-	if keyCheck.Status != "UP" {
-		status = "DOWN"
-		httpStatus = http.StatusServiceUnavailable
-	}
-
-	response := HealthResponse{
-		Status:    status,
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
-		Uptime:    time.Since(h.startTime).Round(time.Second).String(),
-		Version:   h.version,
-		Checks:    checks,
+	response := map[string]interface{}{
+		"status": status,
+		"checks": checks,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -91,48 +95,9 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Ready checks if the service is ready to accept traffic (readiness probe in OpenShift)
-func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Check MongoDB connection with timeout
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if err := h.mongoClient.Ping(ctx, nil); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{
-			"status":  "DOWN",
-			"message": "Database not ready",
-		})
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(map[string]string{
-		"status": "UP",
-	}); err != nil {
-		log.Printf("Failed to encode response: %v", err)
-	}
-}
-
-// Live is a simple liveness check (liveness probe in OpenShift)
+// Live is an alias for Health - simple liveness check
 func (h *HealthHandler) Live(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "UP",
-	})
+	h.Health(w, r)
 }
 
 func (h *HealthHandler) checkDatabase() Check {
@@ -143,32 +108,6 @@ func (h *HealthHandler) checkDatabase() Check {
 		return Check{
 			Status:  "DOWN",
 			Message: "Cannot connect to database",
-		}
-	}
-	return Check{Status: "UP"}
-}
-
-func (h *HealthHandler) checkMemory() Check {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-
-	allocMB := m.Alloc / 1024 / 1024
-	return Check{
-		Status:  "UP",
-		Message: fmt.Sprintf("Allocated: %d MB", allocMB),
-	}
-}
-
-func (h *HealthHandler) checkPublicKey() Check {
-	keyPath := os.Getenv("PUBLIC_KEY_PATH")
-	if keyPath == "" {
-		keyPath = "/etc/certs/public.pem"
-	}
-
-	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
-		return Check{
-			Status:  "DOWN",
-			Message: "Public key file not found",
 		}
 	}
 	return Check{Status: "UP"}

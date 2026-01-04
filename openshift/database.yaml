@@ -80,7 +80,7 @@ spec:
       volumes:
         - name: mongo-data
           persistentVolumeClaim:
-            claimName: media-db-pvc
+            claimName: media-db-pvc-v3
 ---
 # 3. Internal Service for Mongo
 apiVersion: v1

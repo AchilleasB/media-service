@@ -5,6 +5,7 @@ go 1.24.3
 require (
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/redis/go-redis/v9 v9.17.2
+	github.com/sony/gobreaker v1.0.0
 	go.mongodb.org/mongo-driver v1.17.6
 )
 

@@ -10,8 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AchilleasB/baby-kliniek/media-service/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+	"github.com/sony/gobreaker"
 )
 
 type cacheEntry struct {
@@ -23,14 +25,20 @@ type AuthMiddleware struct {
 	publicKey   *rsa.PublicKey
 	cache       sync.Map
 	redisClient *redis.Client
+	redisCB     *gobreaker.CircuitBreaker
 }
 
 const CacheCleanupInterval = 10 * time.Minute
 
 func NewAuthMiddleware(publicKey *rsa.PublicKey, redisClient *redis.Client) *AuthMiddleware {
+	// Configure circuit breaker for Redis operations
+	// Fail-closed strategy: When circuit is open, reject requests for security
+	redisCB := config.NewCircuitBreaker("Redis-Auth")
+
 	m := &AuthMiddleware{
 		publicKey:   publicKey,
 		redisClient: redisClient,
+		redisCB:     redisCB,
 	}
 
 	// Start Background Janitor to sweep L1 cache every 10 minutes
@@ -69,8 +77,14 @@ func (m *AuthMiddleware) RequireRole(roles []string, next http.HandlerFunc) http
 		}
 
 		// L2 Redis blacklist check (Kill-Switch)
-		isRevoked, err := m.redisClient.Exists(r.Context(), "blacklist:"+jti).Result()
-		if err == nil && isRevoked > 0 {
+		revoked, err := m.isBlacklisted(jti, r.Context())
+		if err != nil {
+			// Circuit breaker is open or Redis failed - FAIL CLOSED
+			log.Printf("[CRITICAL] Authentication service unavailable: %v", err)
+			http.Error(w, "authentication service unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		if revoked {
 			m.cache.Delete(jti)
 			log.Printf("Rejected: JTI %s is blacklisted", jti)
 			http.Error(w, "token revoked", http.StatusUnauthorized)
@@ -152,6 +166,22 @@ func (m *AuthMiddleware) getClaimsFromCacheOrParse(tokenString string) (jwt.MapC
 	m.cache.Store(jti, cacheEntry{claims: claims, exp: exp})
 
 	return claims, jti, nil
+}
+
+func (m *AuthMiddleware) isBlacklisted(jti string, ctx context.Context) (bool, error) {
+	// Execute Redis check through circuit breaker
+	result, err := m.redisCB.Execute(func() (interface{}, error) {
+		return m.redisClient.Exists(ctx, "blacklist:"+jti).Result()
+	})
+	
+	if err != nil {
+		// Circuit breaker is open or Redis operation failed
+		log.Printf("[CRITICAL] Redis blacklist check failed (circuit may be open): %v", err)
+		return false, err
+	}
+	
+	isRevoked, ok := result.(int64)
+	return ok && isRevoked > 0, nil
 }
 
 func (m *AuthMiddleware) isAuthorized(userRole string, allowedRoles []string) bool {
