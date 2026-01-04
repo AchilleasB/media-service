@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: media-db-pvc
+  name: media-db-pvc-v3
   labels:
     app: media-service
 spec:
