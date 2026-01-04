@@ -36,9 +36,10 @@ func main() {
 	})
 
 	if err := redisClient.Ping(ctx).Err(); err != nil {
-		log.Fatalf("failed to connect to redis: %v", err)
+		log.Printf("Warning: Redis is not available yet: %v. App will continue and retry later.", err)
+	} else {
+		log.Println("Authenticated with Redis successfully")
 	}
-	log.Println("Authenticated with Redis successfully")
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWTPublicKey, redisClient)
 
