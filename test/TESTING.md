@@ -95,14 +95,3 @@ media-service/
             └── api_integration_test.go
 ```
 
-## CI/CD Pipeline
-
-The GitHub Actions workflow runs:
-
-1. **Lint**: Code quality checks
-2. **Unit Tests**: Fast tests with mocks
-3. **Integration Tests**: Tests with real MongoDB
-4. **Build**: Docker image creation
-5. **Deploy**: Push to registry and trigger OKD webhook
-
-See `.github/workflows/media-service.yaml` for details.

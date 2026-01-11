@@ -1,4 +1,14 @@
-FROM golang:1.24 as builder
+# =============================================================================
+# Dockerfile for Media Service
+# =============================================================================
+# Builds a minimal, secure image for the Media Service API.
+# The Kubernetes deployment runs this container.
+# =============================================================================
+
+ARG APP_VERSION=unknown
+
+# Build stage: compile the Go binary
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -7,16 +17,28 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
+ARG APP_VERSION
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-X main.Version=${APP_VERSION}" \
+    -o media-api ./cmd/api/main.go
 
+# Final stage: minimal runtime image
 FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/main .
-RUN chmod 755 ./main
+RUN apk add --no-cache ca-certificates tzdata
 
-EXPOSE 8081
+# Security: Run as non-root user
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
 
-CMD ["./main"]
+COPY --from=builder /app/media-api .
+RUN chmod 755 ./media-api
+
+USER appuser
+
+EXPOSE 8082
+
+CMD ["./media-api"]
 
