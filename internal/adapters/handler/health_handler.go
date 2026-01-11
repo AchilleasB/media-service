@@ -101,6 +101,13 @@ func (h *HealthHandler) Live(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HealthHandler) checkDatabase() Check {
+	if h.mongoClient == nil {
+		return Check{
+			Status:  "DOWN",
+			Message: "No database client configured",
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
