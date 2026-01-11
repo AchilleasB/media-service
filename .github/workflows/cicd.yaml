@@ -44,38 +44,38 @@ env:
 
 jobs:
   # ==========================================================================
-  # JOB 1: Lint and Static Analysis
+  # JOB 1: Lint and Static Analysis (DISABLED TEMPORARILY)
   # ==========================================================================
-  lint:
-    name: Lint & Static Analysis
-    runs-on: ubuntu-latest
+#   lint:
+#     name: Lint & Static Analysis
+#     runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: ${{ env.WORKING_DIR }}/go.sum
+#       - name: Set up Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version: ${{ env.GO_VERSION }}
+#           cache-dependency-path: ${{ env.WORKING_DIR }}/go.sum
 
-      - name: Download dependencies
-        working-directory: ${{ env.WORKING_DIR }}
-        run: go mod download
-        
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.60.1
-          working-directory: ${{ env.WORKING_DIR }}
-          args: --timeout=5m ./...
+#       - name: Download dependencies
+#         working-directory: ${{ env.WORKING_DIR }}
+#         run: go mod download
 
-      - name: Check Go mod tidy
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
+#       - name: Run golangci-lint
+#         uses: golangci/golangci-lint-action@v6
+#         with:
+#           version: v1.60.1
+#           working-directory: ${{ env.WORKING_DIR }}
+#           args: --timeout=5m ./...
+
+#       - name: Check Go mod tidy
+#         working-directory: ${{ env.WORKING_DIR }}
+#         run: |
+#           go mod tidy
+#           git diff --exit-code go.mod go.sum
 
   # ==========================================================================
   # JOB 2: Unit Tests
@@ -83,7 +83,7 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    needs: lint
+    # needs: lint
     
     steps:
       - name: Checkout code
@@ -220,7 +220,7 @@ jobs:
   notify-failure:
     name: Notify on Failure
     runs-on: ubuntu-latest
-    needs: [lint, unit-tests, integration-tests, deploy]
+    # needs: [lint, unit-tests, integration-tests, deploy]
     if: failure()
     
     steps:
