@@ -61,7 +61,7 @@ spec:
         - name: media-service
           image: media-service:latest
           ports:
-            - containerPort: 8081
+            - containerPort: 8080
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
@@ -93,13 +93,13 @@ spec:
           livenessProbe:
             httpGet:
               path: /health/live
-              port: 8081
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: 8081
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 5
           resources:
@@ -126,8 +126,8 @@ metadata:
     app: media-service
 spec:
   ports:
-    - port: 8081
-      targetPort: 8081
+    - port: 8080
+      targetPort: 8080
       name: http
   selector:
     app: media-service
