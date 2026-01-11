@@ -38,7 +38,7 @@ RUN chmod 755 ./media-api
 
 USER appuser
 
-EXPOSE 8082
+EXPOSE 8080
 
 CMD ["./media-api"]
 
