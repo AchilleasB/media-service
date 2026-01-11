@@ -168,43 +168,43 @@ jobs:
           retention-days: 7
 
   # ==========================================================================
-  # JOB 4: Trigger OKD Build & Deploy
+  # JOB 4: Trigger OKD Build & Deploy (DISABLED DUE TO FIREWALL)
   # ==========================================================================
   # Triggers OKD BuildConfig via webhook after all tests pass.
   # OKD will pull the code, build the image, and deploy automatically.
-  deploy:
-    name: Trigger OKD Build & Deploy
-    runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#   deploy:
+#     name: Trigger OKD Build & Deploy
+#     runs-on: ubuntu-latest
+#     needs: [unit-tests, integration-tests]
+#     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
-    steps:
-      - name: Trigger OKD BuildConfig Webhook
-        run: |
-          echo "Triggering OKD BuildConfig webhook..."
-          echo "OKD will pull the code, build the image, and deploy."
+#     steps:
+#       - name: Trigger OKD BuildConfig Webhook
+#         run: |
+#           echo "Triggering OKD BuildConfig webhook..."
+#           echo "OKD will pull the code, build the image, and deploy."
           
-          # Generic webhook - secret is embedded in URL path, no auth header needed
-          # -k flag allows self-signed certificates
-          curl -X POST "${{ secrets.OKD_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{"commit": "${{ github.sha }}", "ref": "${{ github.ref }}"}' \
-            -k --fail --silent --show-error
+#           # Generic webhook - secret is embedded in URL path, no auth header needed
+#           # -k flag allows self-signed certificates
+#           curl -X POST "${{ secrets.OKD_WEBHOOK_URL }}" \
+#             -H "Content-Type: application/json" \
+#             -d '{"commit": "${{ github.sha }}", "ref": "${{ github.ref }}"}' \
+#             -k --fail --silent --show-error
           
-          echo "OKD build triggered successfully!"
+#           echo "OKD build triggered successfully!"
 
-      - name: Deployment Summary
-        run: |
-          echo "## Deployment Triggered" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Service | media-service |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Triggered at | $(date -u) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note:** OKD is now building the image and will deploy automatically." >> $GITHUB_STEP_SUMMARY
+#       - name: Deployment Summary
+#         run: |
+#           echo "## Deployment Triggered" >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+#           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+#           echo "| Service | media-service |" >> $GITHUB_STEP_SUMMARY
+#           echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+#           echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+#           echo "| Triggered at | $(date -u) |" >> $GITHUB_STEP_SUMMARY
+#           echo "" >> $GITHUB_STEP_SUMMARY
+#           echo "**Note:** OKD is now building the image and will deploy automatically." >> $GITHUB_STEP_SUMMARY
 
   # ==========================================================================
   # JOB 5: Notify on Failure
