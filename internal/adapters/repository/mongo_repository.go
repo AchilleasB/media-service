@@ -19,8 +19,8 @@ type MongoRepository struct {
 
 var _ ports.VideoRepository = (*MongoRepository)(nil)
 
-func NewMongoRepository(mongodb *mongo.Client) *MongoRepository {
-	vidCollection := mongodb.Database("media").Collection("videos")
+func NewMongoRepository(mongodb *mongo.Database) *MongoRepository {
+	vidCollection := mongodb.Collection("videos")
 
 	// Configure circuit breaker for MongoDB operations
 	cb := config.NewCircuitBreaker("MongoDB")

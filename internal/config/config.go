@@ -10,6 +10,7 @@ import (
 type Config struct {
 	JWTPublicKey  *rsa.PublicKey
 	MongoURI      string
+	MongoDb       string
 	Port          string
 	RedisAddress  string
 	RedisPassword string
@@ -31,6 +32,11 @@ func Load() *Config {
 		mongoURI = "mongodb://localhost:27017"
 	}
 
+	dbName := os.Getenv("MONGO_DB")
+	if dbName == "" {
+		dbName = "media"
+	}
+
 	redisAddress := os.Getenv("REDIS_ADDRESS")
 	if redisAddress == "" {
 		redisAddress = "localhost:6379"
@@ -49,6 +55,7 @@ func Load() *Config {
 	return &Config{
 		JWTPublicKey:  publicKey,
 		MongoURI:      mongoURI,
+		MongoDb:       dbName,
 		Port:          port,
 		RedisAddress:  redisAddress,
 		RedisPassword: redisPassword,

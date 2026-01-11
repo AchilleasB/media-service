@@ -27,7 +27,8 @@ func main() {
 	}
 	defer mongoClient.Disconnect(ctx)
 
-	mongoRepo := repository.NewMongoRepository(mongoClient)
+	dbName := mongoClient.Database(cfg.MongoDb)
+	mongoRepo := repository.NewMongoRepository(dbName)
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisAddress,

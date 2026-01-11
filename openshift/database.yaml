@@ -47,6 +47,8 @@ spec:
                 secretKeyRef:
                   name: media-db-secret
                   key: password
+            - name: MONGO_DB
+              value: media
           volumeMounts:
             - name: mongo-data
               mountPath: /data/db
