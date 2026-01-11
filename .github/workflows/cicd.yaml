@@ -152,14 +152,6 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: go mod download
 
-      - name: Wait for services to be ready
-        run: |
-          echo "Waiting for MongoDB..."
-          until mongosh --host localhost --eval "db.adminCommand('ping')" 2>/dev/null; do
-            sleep 1
-          done
-          echo "MongoDB is ready"
-
       - name: Run Integration Tests
         working-directory: ${{ env.WORKING_DIR }}
         env:
