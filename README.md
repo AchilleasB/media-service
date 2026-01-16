@@ -130,13 +130,21 @@ media-service/
 
 ## CI/CD Pipeline
 
-The GitHub Actions workflow (`.github/workflows/media-service.yaml`) runs:
+The GitHub Actions workflow (`.github/workflows/cicd.yaml`) implements a comprehensive CI/CD pipeline:
 
-1. **Lint** - golangci-lint static analysis
-2. **Unit Tests** - Fast tests with mocks
-3. **Integration Tests** - Tests with real MongoDB
-4. **Build** - Docker image pushed to GHCR
-5. **Deploy** - OKD webhook trigger
+### Pipeline Overview
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CI/CD PIPELINE                                    │
+│                                                                             │
+│  GITHUB ACTIONS (Test & Validate)              OKD (Build & Deploy)         │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌─────────────────────────┐   │
+│  │  Lint    │──▶│  Unit    │──▶│ Integr.  │──▶│ Trigger OKD BuildConfig │ │
+│  │  Check   │   │  Tests   │   │  Tests   │   │ (OKD builds & deploys)  │   │
+│  └──────────┘   └──────────┘   └──────────┘   └─────────────────────────┘   │
+│                                                                             │
+│  All tests must pass before OKD build is triggered                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 ## License
 
