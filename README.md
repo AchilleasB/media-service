@@ -145,7 +145,7 @@ The GitHub Actions workflow (`.github/workflows/cicd.yaml`) implements a compreh
 │                                                                             │
 │  All tests must pass before OKD build is triggered                          │
 └─────────────────────────────────────────────────────────────────────────────┘
-
+```
 ## License
 
 MIT
