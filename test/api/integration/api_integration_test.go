@@ -70,7 +70,7 @@ func TestMain(m *testing.M) {
 		fmt.Printf("Failed to connect to MongoDB: %v\n", err)
 		os.Exit(1)
 	}
-	defer testMongoClient.Disconnect(context.Background())
+	defer func() { _ = testMongoClient.Disconnect(context.Background()) }()
 
 	if err := testMongoClient.Ping(ctx, nil); err != nil {
 		fmt.Printf("Failed to ping MongoDB: %v\n", err)
@@ -372,7 +372,7 @@ func TestIntegration_DatabasePersistence(t *testing.T) {
 	}
 
 	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	_ = json.NewDecoder(resp.Body).Decode(&result)
 
 	if result["url"] != "http://example.com/direct.mp4" {
 		t.Errorf("expected url from direct insert, got: %v", result["url"])

@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer mongoClient.Disconnect(ctx)
+	defer func() { _ = mongoClient.Disconnect(ctx) }()
 
 	dbName := mongoClient.Database(cfg.MongoDb)
 	mongoRepo := repository.NewMongoRepository(dbName)
