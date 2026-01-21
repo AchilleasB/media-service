@@ -200,12 +200,12 @@ jobs:
           oc start-build media-service -n cloud-09-development --follow --wait
 
           echo "Triggering rollouts..."
-          oc rollout restart deploy/media-api -n cloud-09-development
+          oc rollout restart deploy/media-service -n cloud-09-development
           
       - name: Verify Deployment
         run: |
           echo "Checking rollout status..."
-          oc rollout status deploy/media-api -n cloud-09-development --timeout=2m
+          oc rollout status deploy/media-service -n cloud-09-development --timeout=2m
 
       - name: Deployment Summary
         run: |
