@@ -234,7 +234,7 @@ func TestIntegration_GetAllVideos(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create request %d failed: %v", i, err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	// Get all videos

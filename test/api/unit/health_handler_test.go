@@ -146,7 +146,7 @@ func TestHealthHandler_UptimeIncreases(t *testing.T) {
 	h.Health(rec1, req1)
 
 	var response1 map[string]interface{}
-	json.Unmarshal(rec1.Body.Bytes(), &response1)
+	_ = json.Unmarshal(rec1.Body.Bytes(), &response1)
 	uptime1 := response1["uptime"].(string)
 
 	// Wait a bit
@@ -158,7 +158,7 @@ func TestHealthHandler_UptimeIncreases(t *testing.T) {
 	h.Health(rec2, req2)
 
 	var response2 map[string]interface{}
-	json.Unmarshal(rec2.Body.Bytes(), &response2)
+	_ = json.Unmarshal(rec2.Body.Bytes(), &response2)
 	uptime2 := response2["uptime"].(string)
 
 	// Uptimes should be different (increased)

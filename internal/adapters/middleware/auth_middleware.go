@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/config"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
+	jwt "github.com/golang-jwt/jwt/v5"
+	redis "github.com/redis/go-redis/v9"
 	"github.com/sony/gobreaker"
 )
 

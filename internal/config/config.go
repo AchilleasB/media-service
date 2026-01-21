@@ -3,17 +3,19 @@ package config
 import (
 	"crypto/rsa"
 	"os"
+	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 type Config struct {
-	JWTPublicKey  *rsa.PublicKey
-	MongoURI      string
-	MongoDb       string
-	Port          string
-	RedisAddress  string
-	RedisPassword string
+	JWTPublicKey       *rsa.PublicKey
+	MongoURI           string
+	MongoDb            string
+	Port               string
+	RedisAddress       string
+	RedisPassword      string
+	CORSAllowedOrigins []string
 }
 
 func Load() *Config {
@@ -52,13 +54,25 @@ func Load() *Config {
 		port = "8080"
 	}
 
+	corsOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	var allowedOrigins []string
+	if corsOrigins == "" {
+		allowedOrigins = []string{"*"} // Default to allow all for development
+	} else {
+		allowedOrigins = strings.Split(corsOrigins, ",")
+		for i, origin := range allowedOrigins {
+			allowedOrigins[i] = strings.TrimSpace(origin)
+		}
+	}
+
 	return &Config{
-		JWTPublicKey:  publicKey,
-		MongoURI:      mongoURI,
-		MongoDb:       dbName,
-		Port:          port,
-		RedisAddress:  redisAddress,
-		RedisPassword: redisPassword,
+		JWTPublicKey:       publicKey,
+		MongoURI:           mongoURI,
+		MongoDb:            dbName,
+		Port:               port,
+		RedisAddress:       redisAddress,
+		RedisPassword:      redisPassword,
+		CORSAllowedOrigins: allowedOrigins,
 	}
 }
 

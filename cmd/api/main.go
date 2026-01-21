@@ -4,6 +4,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -14,7 +18,7 @@ import (
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/config"
 	"github.com/AchilleasB/baby-kliniek/media-service/internal/core/services"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/redis/go-redis/v9"
+	redis "github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -76,11 +80,54 @@ func main() {
 		authMiddleware.RequireRole([]string{"ADMIN"}, http.HandlerFunc(mediaHandler.DeleteVideo)),
 	)
 
-	// Wrap the mux with the metrics middleware
-	loggedRouter := middleware.MetricsMiddleware(mux)
+	// Apply middleware chain: CORS -> Metrics
+	corsRouter := middleware.CORSMiddleware(cfg.CORSAllowedOrigins)(mux)
+	loggedRouter := middleware.MetricsMiddleware(corsRouter)
 
-	log.Printf("Starting server on :%s", cfg.Port)
-	if err := http.ListenAndServe(":"+cfg.Port, loggedRouter); err != nil {
-		log.Fatalf("Could not start server: %s\n", err)
+	// Create HTTP server with timeouts
+	srv := &http.Server{
+		Addr:         ":" + cfg.Port,
+		Handler:      loggedRouter,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Starting server on :%s", cfg.Port)
+		log.Printf("CORS allowed origins: %v", cfg.CORSAllowedOrigins)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Could not start server: %s\n", err)
+		}
+	}()
+
+	// Setup signal handling for graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Block until we receive a signal
+	sig := <-quit
+	log.Printf("Received signal %v, initiating graceful shutdown...", sig)
+
+	// Create shutdown context with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Attempt graceful shutdown
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	// Close MongoDB connection
+	if err := mongoClient.Disconnect(shutdownCtx); err != nil {
+		log.Printf("Error closing MongoDB: %v", err)
+	}
+
+	// Close Redis connection
+	if err := redisClient.Close(); err != nil {
+		log.Printf("Error closing Redis: %v", err)
+	}
+
+	log.Println("Server gracefully stopped")
 }
